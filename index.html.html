@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oddle 服務報價計算機</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --purple:#7F77DD;
+  --purple-light:#EEEDFE;
+  --purple-dark:#3C3489;
+  --text:#1a1a2e;
+  --text-sub:#555570;
+  --text-hint:#8888a0;
+  --bg:#f7f7fb;
+  --surface:#ffffff;
+  --border:#e2e2ee;
+  --success-bg:#eaf3de;
+  --success:#3B6D11;
+  --warn-bg:#FAEEDA;
+  --warn:#854F0B;
+  --info-bg:#E6F1FB;
+  --info:#185FA5;
+  --radius:12px;
+  --radius-sm:8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:0}
+a{color:var(--purple)}
+
+.header{background:var(--purple-dark);color:#fff;padding:2.5rem 1.5rem 3.5rem;text-align:center;position:relative;overflow:hidden}
+.header::after{content:"";position:absolute;bottom:-2px;left:0;right:0;height:40px;background:var(--bg);border-radius:50% 50% 0 0/100% 100% 0 0}
+.header-logo{font-size:13px;font-weight:500;letter-spacing:.15em;opacity:.7;text-transform:uppercase;margin-bottom:1rem}
+.header h1{font-size:clamp(1.5rem,4vw,2.2rem);font-weight:700;line-height:1.3;margin-bottom:.5rem}
+.header p{font-size:14px;opacity:.75;max-width:380px;margin:0 auto}
+
+.main{max-width:720px;margin:0 auto;padding:1.5rem 1rem 4rem}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.5rem;margin-bottom:1rem}
+.card-title{font-size:14px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.06em;margin-bottom:1.1rem;display:flex;align-items:center;gap:8px}
+.card-title svg{width:16px;height:16px;stroke:var(--purple);flex-shrink:0}
+
+/* BILLING TOGGLE */
+.billing-wrap{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:1.25rem}
+.billing-opt{position:relative}
+.billing-opt input{position:absolute;opacity:0;width:0;height:0}
+.billing-opt label{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 12px;cursor:pointer;background:var(--bg);transition:background .15s;text-align:center;border:none}
+.billing-opt label .b-title{font-size:14px;font-weight:500;color:var(--text-sub);transition:color .15s}
+.billing-opt label .b-price{font-size:18px;font-weight:700;color:var(--text-hint);transition:color .15s;margin-top:2px}
+.billing-opt label .b-note{font-size:11px;color:var(--text-hint);margin-top:3px;transition:color .15s}
+.billing-opt input:checked+label{background:var(--purple-dark)}
+.billing-opt input:checked+label .b-title{color:rgba(255,255,255,.75)}
+.billing-opt input:checked+label .b-price{color:#fff}
+.billing-opt input:checked+label .b-note{color:rgba(255,255,255,.6)}
+.billing-divider{width:1px;background:var(--border);align-self:stretch}
+.save-pill{display:inline-block;background:#AFA9EC;color:#26215C;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:6px;vertical-align:middle}
+
+/* STORES ROW */
+.stores-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--border)}
+.stores-row label{font-size:13px;font-weight:500;color:var(--text-sub);white-space:nowrap}
+.stores-row input[type=number]{width:80px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-size:14px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;text-align:center;transition:border-color .15s}
+.stores-row input[type=number]:focus{border-color:var(--purple)}
+.stores-desc{font-size:12px;color:var(--text-hint);flex:1}
+
+/* TOGGLE ROWS */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-info{flex:1;min-width:0;padding-right:12px}
+.toggle-name{font-size:15px;font-weight:500;color:var(--text)}
+.toggle-desc{font-size:12px;color:var(--text-hint);margin-top:2px;line-height:1.5}
+.switch{position:relative;width:42px;height:24px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0;position:absolute}
+.track{position:absolute;inset:0;background:#d0d0e0;border-radius:24px;cursor:pointer;transition:background .2s}
+.track::before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+input:checked+.track{background:var(--purple)}
+input:checked+.track::before{transform:translateX(18px)}
+
+.detail{display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)}
+.detail.visible{display:block}
+.input-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:480px){.input-grid{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12px;font-weight:500;color:var(--text-sub)}
+.field small{font-size:11px;color:var(--text-hint)}
+.field input[type=number]{border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;font-size:14px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;width:100%;transition:border-color .15s}
+.field input[type=number]:focus{border-color:var(--purple)}
+
+.range-wrap{margin-top:1rem}
+.range-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.range-header span{font-size:12px;font-weight:500;color:var(--text-sub)}
+.range-header strong{font-size:14px;color:var(--purple)}
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;border-radius:4px;background:var(--border);outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--purple);cursor:pointer;border:3px solid #fff;box-shadow:0 1px 4px rgba(127,119,221,.4)}
+.range-split{display:flex;gap:1.5rem;margin-top:8px}
+.range-split span{font-size:13px;color:var(--text-hint)}
+.range-split strong{color:var(--text);font-weight:500}
+
+/* SUMMARY CARDS */
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
+@media(max-width:480px){.summary-grid{grid-template-columns:1fr}}
+.sum-card{border-radius:var(--radius);padding:1.25rem 1.5rem;position:relative}
+.sum-card.main-card{background:var(--purple-dark);color:#fff}
+.sum-card.per-store-card{background:var(--surface);border:1px solid var(--border)}
+.sum-label{font-size:12px;opacity:.7;margin-bottom:4px}
+.sum-card.per-store-card .sum-label{color:var(--text-hint);opacity:1}
+.sum-amount{font-size:2rem;font-weight:700;letter-spacing:-.02em}
+.sum-card.per-store-card .sum-amount{color:var(--purple-dark)}
+.sum-note{font-size:11px;opacity:.6;margin-top:4px}
+.sum-card.per-store-card .sum-note{color:var(--text-hint);opacity:1}
+.sum-saving{display:inline-block;background:rgba(255,255,255,.15);border-radius:20px;font-size:11px;padding:3px 10px;margin-top:6px;font-weight:500}
+.per-store-hidden{display:none}
+
+/* UberEats comparison badge */
+.vs-badge{background:var(--info-bg);color:var(--info);border-radius:var(--radius-sm);padding:.75rem 1rem;font-size:13px;margin-bottom:1rem;display:none}
+.vs-badge strong{font-weight:700}
+
+/* BREAKDOWN */
+.breakdown-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.breakdown-item:last-child{border-bottom:none}
+.breakdown-name{font-size:14px;font-weight:500;color:var(--text)}
+.breakdown-sub{font-size:12px;color:var(--text-hint);margin-top:2px}
+.breakdown-right{display:flex;align-items:center;gap:8px}
+.badge{font-size:11px;padding:3px 9px;border-radius:var(--radius-sm);font-weight:500;white-space:nowrap}
+.badge-free{background:var(--success-bg);color:var(--success)}
+.badge-over{background:var(--warn-bg);color:var(--warn)}
+.base-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #e2e2ee;font-size:14px}
+.base-row span:last-child{font-weight:700;color:var(--purple-dark)}
+
+.footer-note{font-size:12px;color:var(--text-hint);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem 1.25rem;line-height:1.7}
+.footer-note strong{color:var(--text-sub)}
+
+footer{text-align:center;padding:2rem 1rem;font-size:12px;color:var(--text-hint)}
+footer a{color:var(--purple);text-decoration:none}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">Oddle</div>
+  <h1>服務報價計算機</h1>
+  <p>勾選需要的服務，填入每月使用量，立即試算費用</p>
+</div>
+
+<div class="main">
+
+  <!-- 計費方式 + 門市數 -->
+  <div class="card">
+    <div class="card-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8L2 7h20z"/></svg>
+      計費方式
+    </div>
+
+    <div class="billing-wrap">
+      <div class="billing-opt">
+        <input type="radio" name="billing" id="b-monthly" value="monthly" checked onchange="calc()">
+        <label for="b-monthly">
+          <span class="b-title">月繳</span>
+          <span class="b-price">$2,088<span style="font-size:12px;font-weight:400">/月</span></span>
+          <span class="b-note">隨時可取消</span>
+        </label>
+      </div>
+      <div class="billing-opt">
+        <input type="radio" name="billing" id="b-yearly" value="yearly" onchange="calc()">
+        <label for="b-yearly">
+          <span class="b-title">年繳 <span class="save-pill">買十送二</span></span>
+          <span class="b-price">$1,740<span style="font-size:12px;font-weight:400">/月</span></span>
+          <span class="b-note">$20,880/年，省 $4,176</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="stores-row">
+      <label for="stores-n">同品牌門市數</label>
+      <input type="number" id="stores-n" value="1" min="1" step="1" oninput="calc()">
+      <span class="stores-desc" id="stores-desc">單一門市，費用不分攤</span>
+    </div>
+  </div>
+
+  <!-- 服務選擇 -->
+  <div class="card">
+    <div class="card-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      選擇服務項目
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-name">訂位系統</div>
+        <div class="toggle-desc">月免費 700 組線上訂位，超額 $3/組；來電/現場（線下）訂位免費</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="t-res" checked onchange="toggleDetail('res',this.checked);calc()"><span class="track"></span></label>
+    </div>
+    <div class="detail visible" id="d-res">
+      <div class="input-grid">
+        <div class="field">
+          <label for="res-total">每月總訂位組數</label>
+          <input type="number" id="res-total" value="500" min="0" step="10" oninput="calc()">
+        </div>
+      </div>
+      <div class="range-wrap">
+        <div class="range-header">
+          <span>來電 / 現場比例（線下，免費）</span>
+          <strong id="offline-label">50%</strong>
+        </div>
+        <input type="range" id="offline-pct" min="0" max="100" value="50" step="5" oninput="updateRange();calc()">
+        <div class="range-split">
+          <span>線上訂位：<strong id="online-n">250</strong> 組</span>
+          <span>線下訂位：<strong id="offline-n">250</strong> 組</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-name">候位系統</div>
+        <div class="toggle-desc">月免費 300 組，超額 $5/組</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="t-wait" onchange="toggleDetail('wait',this.checked);calc()"><span class="track"></span></label>
+    </div>
+    <div class="detail" id="d-wait">
+      <div class="input-grid">
+        <div class="field">
+          <label for="wait-n">每月候位組數</label>
+          <input type="number" id="wait-n" value="200" min="0" step="10" oninput="calc()">
+        </div>
+      </div>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-name">顧客獎勵系統</div>
+        <div class="toggle-desc">月免費 300 位註冊 / 100 組回訪兌換，超額依人頭計</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="t-crm" onchange="toggleDetail('crm',this.checked);calc()"><span class="track"></span></label>
+    </div>
+    <div class="detail" id="d-crm">
+      <div class="input-grid">
+        <div class="field">
+          <label for="crm-reg">每月新顧客註冊數</label>
+          <input type="number" id="crm-reg" value="200" min="0" step="10" oninput="calc()">
+        </div>
+        <div class="field">
+          <label for="crm-red">每月回訪兌換數</label>
+          <input type="number" id="crm-red" value="80" min="0" step="10" oninput="calc()">
+        </div>
+      </div>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-name">外帶外送系統</div>
+        <div class="toggle-desc">月免費 $25,000 線上訂單，超額抽成 7%</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="t-del" onchange="toggleDetail('del',this.checked);calc()"><span class="track"></span></label>
+    </div>
+    <div class="detail" id="d-del">
+      <div class="input-grid">
+        <div class="field">
+          <label for="del-gmv">每月線上訂單金額（$）</label>
+          <input type="number" id="del-gmv" value="30000" min="0" step="1000" oninput="calc()">
+        </div>
+      </div>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-name">行銷引擎</div>
+        <div class="toggle-desc">月免費 5,000 點，超額每 1,000 點 $150</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="t-mkt" onchange="toggleDetail('mkt',this.checked);calc()"><span class="track"></span></label>
+    </div>
+    <div class="detail" id="d-mkt">
+      <div class="input-grid">
+        <div class="field">
+          <label for="mkt-push">專案推播數（封）</label>
+          <small>1 封 = 1 點</small>
+          <input type="number" id="mkt-push" value="1000" min="0" step="100" oninput="calc()">
+        </div>
+        <div class="field">
+          <label for="mkt-auto">自動化行銷數（封）</label>
+          <small>1 封 = 20 點</small>
+          <input type="number" id="mkt-auto" value="100" min="0" step="10" oninput="calc()">
+        </div>
+      </div>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-name">LINE 通知</div>
+        <div class="toggle-desc">$1/封，無免費額度</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="t-line" onchange="toggleDetail('line',this.checked);calc()"><span class="track"></span></label>
+    </div>
+    <div class="detail" id="d-line">
+      <div class="input-grid">
+        <div class="field">
+          <label for="line-n">每月發送封數</label>
+          <input type="number" id="line-n" value="500" min="0" step="100" oninput="calc()">
+        </div>
+      </div>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-name">自動通話</div>
+        <div class="toggle-desc">$2/通，無免費額度</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="t-call" onchange="toggleDetail('call',this.checked);calc()"><span class="track"></span></label>
+    </div>
+    <div class="detail" id="d-call">
+      <div class="input-grid">
+        <div class="field">
+          <label for="call-n">每月通話通數</label>
+          <input type="number" id="call-n" value="200" min="0" step="50" oninput="calc()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 總計 -->
+  <div class="summary-grid">
+    <div class="sum-card main-card">
+      <div class="sum-label">每月預估費用</div>
+      <div class="sum-amount" id="total-amt">$2,088</div>
+      <div class="sum-note" id="total-note">月繳方案</div>
+      <div class="sum-saving" id="saving-line" style="display:none"></div>
+    </div>
+    <div class="sum-card per-store-card per-store-hidden" id="per-store-card">
+      <div class="sum-label">每間門市平均</div>
+      <div class="sum-amount" id="per-store-amt">—</div>
+      <div class="sum-note" id="per-store-note"></div>
+    </div>
+  </div>
+
+  <!-- UberEats 比較 -->
+  <div class="vs-badge" id="vs-badge"></div>
+
+  <!-- 費用明細 -->
+  <div class="card">
+    <div class="card-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      費用明細
+    </div>
+    <div class="base-row">
+      <span id="base-label">月費（開通全產品）</span>
+      <span id="base-amount">$2,088/月</span>
+    </div>
+    <div id="breakdown"></div>
+    <div id="empty-note" style="padding:12px 0;font-size:13px;color:var(--text-hint);text-align:center">
+      目前所有項目皆在免費額度內 🎉
+    </div>
+  </div>
+
+  <div class="footer-note">
+    <strong>＊ 月費不包含：</strong>刷卡手續費 3%、簡訊費 $2/封、物流費（按距離計價）
+  </div>
+
+</div>
+
+<footer>
+  Powered by <a href="https://oddle.me" target="_blank">Oddle</a> &nbsp;·&nbsp; 此試算表僅供參考，實際費用以合約為準
+</footer>
+
+<script>
+function toggleDetail(id,show){
+  var el=document.getElementById('d-'+id);
+  if(el){el.className='detail'+(show?' visible':'')}
+}
+
+function updateRange(){
+  var pct=parseInt(document.getElementById('offline-pct').value);
+  var total=parseInt(document.getElementById('res-total').value)||0;
+  var offline=Math.round(total*pct/100);
+  var online=total-offline;
+  document.getElementById('offline-label').textContent=pct+'%';
+  document.getElementById('online-n').textContent=online.toLocaleString();
+  document.getElementById('offline-n').textContent=offline.toLocaleString();
+}
+
+function getN(id){return Math.max(0,parseFloat(document.getElementById(id).value)||0)}
+function isOn(id){return document.getElementById('t-'+id).checked}
+function isYearly(){return document.getElementById('b-yearly').checked}
+
+function calc(){
+  updateRange();
+
+  var yearly=isYearly();
+  var baseFee=yearly?1740:2088; // monthly equivalent
+  var stores=Math.max(1,Math.round(getN('stores-n')));
+
+  var extras=[];
+  var totalExtra=0;
+
+  if(isOn('res')){
+    var total=getN('res-total');
+    var pct=getN('offline-pct')/100;
+    var offline=Math.round(total*pct);
+    var online=total-offline;
+    var over=Math.max(0,online-700);
+    var cost=over*3;
+    totalExtra+=cost;
+    extras.push({name:'訂位系統',sub:'線上 '+online.toLocaleString()+' 組 / 線下 '+offline.toLocaleString()+' 組（免費）',cost:cost,over:over>0});
+  }
+  if(isOn('wait')){
+    var n=getN('wait-n');
+    var over=Math.max(0,n-300);
+    var cost=over*5;
+    totalExtra+=cost;
+    extras.push({name:'候位系統',sub:n.toLocaleString()+' 組（免費額度 300 組）',cost:cost,over:over>0});
+  }
+  if(isOn('crm')){
+    var reg=getN('crm-reg');
+    var red=getN('crm-red');
+    var overReg=Math.max(0,reg-300);
+    var overRed=Math.max(0,red-100);
+    var cost=overReg*7+overRed*15;
+    totalExtra+=cost;
+    extras.push({name:'顧客獎勵系統',sub:'新客 '+reg.toLocaleString()+' 位 / 兌換 '+red.toLocaleString()+' 組',cost:cost,over:cost>0});
+  }
+  if(isOn('del')){
+    var gmv=getN('del-gmv');
+    var over=Math.max(0,gmv-25000);
+    var cost=Math.round(over*0.07);
+    totalExtra+=cost;
+    extras.push({name:'外帶外送系統',sub:'訂單 $'+gmv.toLocaleString()+'（免費額度 $25,000）',cost:cost,over:over>0});
+  }
+  if(isOn('mkt')){
+    var push=getN('mkt-push');
+    var auto=getN('mkt-auto');
+    var pts=push*1+auto*20;
+    var over=Math.max(0,pts-5000);
+    var cost=Math.ceil(over/1000)*150;
+    totalExtra+=cost;
+    extras.push({name:'行銷引擎',sub:pts.toLocaleString()+' 點（免費額度 5,000 點）',cost:cost,over:over>0});
+  }
+  if(isOn('line')){
+    var n=getN('line-n');
+    var cost=n*1;
+    totalExtra+=cost;
+    extras.push({name:'LINE 通知',sub:n.toLocaleString()+' 封 × $1',cost:cost,over:cost>0});
+  }
+  if(isOn('call')){
+    var n=getN('call-n');
+    var cost=n*2;
+    totalExtra+=cost;
+    extras.push({name:'自動通話',sub:n.toLocaleString()+' 通 × $2',cost:cost,over:cost>0});
+  }
+
+  var totalMonthly=Math.round(baseFee+totalExtra);
+  var perStore=Math.round(totalMonthly/stores);
+
+  // Update main total
+  document.getElementById('total-amt').textContent='$'+totalMonthly.toLocaleString();
+  document.getElementById('total-note').textContent=yearly?'年繳方案（$'+Math.round((baseFee+totalExtra)*12).toLocaleString()+'/年）':'月繳方案';
+
+  // Saving line for yearly
+  var savingEl=document.getElementById('saving-line');
+  if(yearly){
+    var monthlyCost=2088+totalExtra;
+    var yearlyCost=(1740+totalExtra)*12;
+    var saved=Math.round(monthlyCost*12-yearlyCost);
+    if(saved>0){savingEl.style.display='inline-block';savingEl.textContent='比月繳省 $'+saved.toLocaleString()+'/年';}
+    else{savingEl.style.display='none';}
+  } else {
+    savingEl.style.display='none';
+  }
+
+  // Per store card
+  var psCard=document.getElementById('per-store-card');
+  if(stores>1){
+    psCard.classList.remove('per-store-hidden');
+    document.getElementById('per-store-amt').textContent='$'+perStore.toLocaleString();
+    document.getElementById('per-store-note').textContent='共 '+stores+' 間門市分攤';
+    document.getElementById('stores-desc').textContent='共 '+stores+' 間門市，方案共用，每間分攤 $'+perStore.toLocaleString()+'/月';
+  } else {
+    psCard.classList.add('per-store-hidden');
+    document.getElementById('stores-desc').textContent='單一門市，費用不分攤';
+  }
+
+  // Base row label
+  document.getElementById('base-label').textContent=yearly?'年繳月費（$20,880/年 ÷ 12）':'月費（開通全產品）';
+  document.getElementById('base-amount').textContent='$'+baseFee.toLocaleString()+'/月';
+
+  // Breakdown
+  var bd=document.getElementById('breakdown');
+  var empty=document.getElementById('empty-note');
+  bd.innerHTML='';
+  if(extras.length===0){
+    empty.style.display='block';
+  } else {
+    empty.style.display='none';
+    extras.forEach(function(e){
+      var badge=e.over
+        ?'<span class="badge badge-over">超額 +$'+Math.round(e.cost).toLocaleString()+'</span>'
+        :'<span class="badge badge-free">免費額度內</span>';
+      var div=document.createElement('div');
+      div.className='breakdown-item';
+      div.innerHTML='<div><div class="breakdown-name">'+e.name+'</div><div class="breakdown-sub">'+e.sub+'</div></div><div class="breakdown-right">'+badge+'</div>';
+      bd.appendChild(div);
+    });
+  }
+
+  // UberEats comparison
+  var vsBadge=document.getElementById('vs-badge');
+  if(isOn('del')){
+    var gmv=getN('del-gmv');
+    var ubereats=Math.round(gmv*0.30);
+    var saved=ubereats-totalMonthly;
+    if(saved>0){
+      vsBadge.style.display='block';
+      vsBadge.innerHTML='💡 同樣 $'+gmv.toLocaleString()+' 的外送營業額，UberEats 抽成約 <strong>$'+ubereats.toLocaleString()+'</strong>，用 Oddle 可省下約 <strong>$'+saved.toLocaleString()+'</strong>/月';
+    } else {
+      vsBadge.style.display='none';
+    }
+  } else {
+    vsBadge.style.display='none';
+  }
+}
+
+updateRange();
+calc();
+</script>
+</body>
+</html>
